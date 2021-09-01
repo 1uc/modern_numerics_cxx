@@ -1,5 +1,6 @@
 #include <cmath>
 #include <iostream>
+#include <vector>
 
 // Let's start by looking at a "function object" with read only state. A
 // function object is a class which has the operator() defined. Let's pick
@@ -23,14 +24,14 @@ private:
 //
 // 2. Even tough `operator()` only reads `a` and `b`, we can't do the
 //    following:
-//        void print_abit(const SinusoidalV1 &sinusoidal) {
+//        void print_cref_v1(const SinusoidalV1 &sinusoidal) {
 //          std::cout << sinusoidal(42.0) << "\n";  // the offending line.
 //        }
 
 // The justification for const correctness is to avoid 1. and enable 2. The
 // reason why we want 2. is that it clearly states that passing sinusoidal to
-// `print_afew` does not change `sinusoidal`. We know this without looking at
-// the definition of `print_afew` and any function it might pass `sinusoidal`
+// `print_cref_v1` does not change `sinusoidal`. We know this without looking at
+// the definition of `print_cref_v1` and any function it might pass `sinusoidal`
 // to.
 
 // =============================================================================
@@ -50,13 +51,13 @@ private:
   double b;
 };
 
-// The `const` at the end of the method promises, that the function will not
+// The `const` at the end of the method promises that the function will not
 // modify its state. Additionally it also promises to no call other methods
 // that might cause its state to change.
 // Put simply: calling `operator()` will not change the object.
 
 // Now the following works without any problems:
-void print_abit(const Sinusoidal &sinusoidal) {
+void print_cref(const Sinusoidal &sinusoidal) {
   std::cout << sinusoidal(42.0) << "\n";
 }
 
@@ -70,7 +71,7 @@ void print_ref(Sinusoidal &sinusoidal) {
 
 int main() {
   // This can get clumsy in say the following:
-  print_abit(Sinusoidal(1.0, 2.0));
+  print_cref(Sinusoidal(1.0, 2.0));
 
   auto sinusoidal = Sinusoidal(1.0, 2.0);
   print_ref(sinusoidal);
@@ -116,23 +117,25 @@ int main() {
 // but that doesn't really count).
 //
 // Slippery slope. There is a way out and it may be the correct choice,
-// occationally. Any method defined as `mutable` can be modified from within
+// occationally. Any member defined as `mutable` can be modified from within
 // const methods.
 
 class SinusoidalV3 {
 public:
-  SinusoidalV3(double a, double b) : a(a), b(b) {}
+  SinusoidalV3(double a, double b) : a(a), b(b), tmp_(1) {}
 
   double operator()(double x) const {
     // Imagine some situation where creating `tmp_` everytime is too expensive,
     // e.g. if one must allocate a small number of doubles only to do very litte
     // work on them.
 
-    // To me the key is that `tmp_` is written before it is read. Meaning no
-    // state is carried over from previous runs. Therefore, when dealing with
-    // single threaded code, this behaves like it does not modify its state.
-    tmp_ = a * b; // Legal, but really not meaningful.
-    return a * std::sin(tmp_ * x) + b * std::cos(tmp_ * x);
+    // To me the key is that all methods write to `tmp_` before reading from
+    // it. Meaning no state is carried over from previous runs. Therefore, when
+    // dealing with single threaded code, this behaves like it does not modify
+    // its state.
+
+    tmp_[0] = a * b; // Legal, but really not meaningful.
+    return a * std::sin(tmp_[0] * x) + b * std::cos(tmp_[0] * x);
   }
 
 private:
@@ -140,5 +143,5 @@ private:
   double b;
 
   // v--- This allows us to modify `tmp_` from inside a const method.
-  mutable double tmp_;
+  mutable std::vector<double> tmp_;
 };
