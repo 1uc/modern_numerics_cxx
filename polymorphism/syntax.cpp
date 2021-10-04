@@ -27,6 +27,23 @@ public:
   void non_poly()          { std::cout << "MoreDerived::non_poly() \n"; }
 };
 
+class OldStyleDerived : public Base {
+public:
+  void poly()     { std::cout << "OldStyleDerived::poly() \n"; }
+  void non_poly() { std::cout << "OldStyleDerived::non_poly() \n"; }
+};
+
+class OldStyleDerivedWithTypo : public Base {
+public:
+  // This ----vvvvv is a subtle mistake, with grave consequences, at runtime.
+  void poly() const { std::cout << "OldStyleDerivedWithTypo::poly() \n"; }
+
+  // With `override` this bug is caught at compile time:
+  // void poly() const override { std::cout << "OldStyleDerivedWithTypo::poly() \n"; }
+
+  void non_poly() { std::cout << "OldStyleDerivedWithTypo::non_poly() \n"; }
+};
+
 
 // The important thing to observe is that `b` is a reference of type `Base` and
 // we can pass not only objects of type `Base` but also of a type derived from
@@ -54,12 +71,28 @@ int main() {
 
   r.poly();
   r.non_poly();
-
   std::cout << "----------------------------------------\n";
 
   use_through_base(b);
   use_through_base(d);
   use_through_base(r);
+
+  std::cout << "========================================\n";
+
+  OldStyleDerived o;
+  OldStyleDerivedWithTypo ot;
+
+  o.poly();
+  o.non_poly();
+
+  ot.poly();
+  ot.non_poly();
+
+  std::cout << "----------------------------------------\n";
+
+  use_through_base(o);
+  use_through_base(ot);
+
 
   return 0;
 }
@@ -82,6 +115,9 @@ int main() {
 //     You should notice that using `override` is the only way of stating that
 //     this function overrides a method and instruct the compiler to produce an
 //     error if it doesn't.
+//
+//     The `OldStyleDerivedWithTypo` demonstrates how you could easily make
+//     mistakes, by having subtly mismatching signatures.
 //
 //   * One could redundantly add `virtual` in `Derived::poly`. This is not
 //     recommended by the Core Guidelines [1].
