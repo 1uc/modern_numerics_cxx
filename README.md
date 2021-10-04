@@ -11,4 +11,5 @@ Unless there's a build system in place:
 
     g++ -std=c++17 FILE.cpp -o FILE
 
-is a good choice; and a bad habit since you should turn on warnings.
+is a good choice; and a bad habit since you should turn on warnings, e.g.,
+`-Wall`, `-Wextra`, `-Wconversion`.
